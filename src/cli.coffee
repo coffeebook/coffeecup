@@ -13,13 +13,6 @@ handle_error = (err) -> console.log err.stack if err
 codeIn = ""
 stdin = process.openStdin()
 
-# Buffer stream of data concat to string
-stdin.on 'data', (buffer) ->
-    codeIn += buffer.toString() if buffer
-
-stdin.on 'end', ->
-    log coffeecup.render codeIn
-
 
 watch = (files, fn) ->
   if false #fs.watch should be used, but it's not working properly
@@ -120,8 +113,14 @@ switches = [
   delete options.arguments
 
   log parser.help() if options.help or argv.length is 0
-  log coffeecup.render codeIn if options.stdin
   log coffeecup.version if options.version
+
+  if options.stdin
+    # Buffer streams of data and concat to string until finished
+    stdin.on 'data', (buffer) -> codeIn += buffer.toString() if buffer
+    stdin.on 'end', -> log coffeecup.render codeIn
+
+
   if options.utils
     options.locals ?= {}
     options.locals.render = (file) ->
