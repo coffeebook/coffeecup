@@ -9,6 +9,18 @@ options = null
 
 handle_error = (err) -> console.log err.stack if err
 
+# Hack: allow for stdin stream of code processing
+codeIn = ""
+stdin = process.openStdin()
+
+# Buffer stream of data concat to string
+stdin.on 'data', (buffer) ->
+    codeIn += buffer.toString() if buffer
+
+stdin.on 'end', ->
+    log coffeecup.render codeIn
+
+
 watch = (files, fn) ->
   if false #fs.watch should be used, but it's not working properly
     for file in files
@@ -30,7 +42,7 @@ compile = (input_path, output_directory, js, namespace = 'templates') ->
     appendTemplate = ->
       if i >= input_path.length or not options.package
         output = """
-          (function(){ 
+          (function(){
             this.#{namespace} || (this.#{namespace} = {});
             #{body}
           }).call(this);
@@ -56,7 +68,7 @@ compile = (input_path, output_directory, js, namespace = 'templates') ->
     else
       func = coffeecup.compile contents, options
       output = """
-        (function(){ 
+        (function(){
           this.#{namespace} || (this.#{namespace} = {});
           this.#{namespace}[#{JSON.stringify name}] = #{func};
         }).call(this);
@@ -92,6 +104,7 @@ switches = [
   ['-w', '--watch', 'watch templates for changes, and recompile']
   ['-o', '--output [dir]', 'set the directory for compiled html']
   ['-p', '--print', 'print the compiled html to stdout']
+  ['-i', '--stdin', 'accept input over standard input interface stdin']
   ['-f', '--format', 'apply line breaks and indentation to html output']
   ['-u', '--utils', 'add helper locals (currently only "render")']
   ['-z', '--optimize', 'optimize resulting JS']
@@ -99,7 +112,7 @@ switches = [
   ['-h', '--help', 'display this help message']
   ['-k', '--package', 'use with -j to include all templates in a single [namespace].js']
 ]
- 
+
 @run = ->
   parser = new OptionParser switches, usage
   options = parser.parse argv
@@ -107,6 +120,7 @@ switches = [
   delete options.arguments
 
   log parser.help() if options.help or argv.length is 0
+  log coffeecup.render codeIn if options.stdin
   log coffeecup.version if options.version
   if options.utils
     options.locals ?= {}
