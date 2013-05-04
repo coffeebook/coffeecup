@@ -9,9 +9,6 @@ options = null
 
 handle_error = (err) -> console.log err.stack if err
 
-# Hack: allow for stdin stream of code processing
-codeIn = ""
-stdin = process.openStdin()
 
 
 watch = (files, fn) ->
@@ -116,6 +113,11 @@ switches = [
   log coffeecup.version if options.version
 
   if options.stdin
+
+    # Hack: allow for stdin stream of code processing
+    codeIn = ""
+    stdin = process.openStdin()
+
     # Buffer streams of data and concat to string until finished
     stdin.on 'data', (buffer) -> codeIn += buffer.toString() if buffer
     stdin.on 'end', -> log coffeecup.render codeIn
